@@ -12,7 +12,7 @@ import (
 	"github.com/nashl/online-store-server/graph/generated"
 )
 
-const defaultPort = "8080"
+const defaultPort = "9990"
 
 func main() {
 
