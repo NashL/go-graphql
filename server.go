@@ -10,19 +10,13 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/joho/godotenv"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 const defaultPort = "9990"
 
 func main() {
-
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	//start connect database
+	//start connecting to the database
 	dbConnection.NewDatabase()
 
 	port := os.Getenv("PORT")

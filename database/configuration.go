@@ -3,7 +3,6 @@ package dbConnection
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
 	"os"
 )
 
@@ -14,7 +13,6 @@ func generateDataSourceName() string{
 	password := os.Getenv("MYSQL_PASSWORD")
 	database := os.Getenv("MYSQL_DATABASE")
 	sourceName:= user + ":" + password + "@tcp(127.0.0.1:3306)/" + database + "?parseTime=true&sql_mode=ansi"
-	log.Printf("SourceName: " + sourceName)
 	return sourceName
 }
 
