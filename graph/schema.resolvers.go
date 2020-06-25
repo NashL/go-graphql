@@ -5,7 +5,12 @@ package graph
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
+	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -42,34 +47,61 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	return user, nil
 }
 
-func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
-	var result []*model.User
+func (r *mutationResolver) Login(ctx context.Context, email string, password string) (*model.Token, error) {
+	var u model.User
 
+	err := dbConnection.DB.QueryRow("SELECT userId, email FROM `users` WHERE email = ? AND password = ? ", email, password).Scan(&u.UserID, &u.Email)
 
-	rows, err := dbConnection.DB.Query("SELECT userId, fullname, email, password, createdAt, updatedAt FROM `users`")
 
 	if err != nil{
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user or password wrong")
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	// Create a new token object, specifying signing method and the claims
+	// you would like it to contain.
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"authorized": true,
+		"userId": u.UserID,
+		"exp": int(time.Now().Add(time.Hour * 1).Unix()),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET_KEY")))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	expiredAt := time.Now().Add(time.Hour * 1).Unix()
+	obj := &model.Token{
+		Token:     tokenString,
+		ExpiredAt: int(expiredAt),
+	}
+
+	return obj, nil
+}
+
+func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
+	var result []*model.User
+	rows, err := dbConnection.DB.Query("SELECT userId, fullname, email, password, createdAt, updatedAt FROM `users`")
+	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close() // important
 
-	for rows.Next()  {
-
+	for rows.Next() {
 		var u model.User
-
 		err = rows.Scan(&u.UserID, &u.FullName, &u.Email, &u.Password, &u.CreatedAt, &u.UpdatedAt)
-
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
-
 		result = append(result, &u)
 	}
-
-
 	return result, nil
-
 }
 
 // Mutation returns generated.MutationResolver implementation.

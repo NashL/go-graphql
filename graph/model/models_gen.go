@@ -8,6 +8,11 @@ type NewUser struct {
 	Password string `json:"password"`
 }
 
+type Token struct {
+	Token     string `json:"token"`
+	ExpiredAt int    `json:"expiredAt"`
+}
+
 type User struct {
 	UserID    string `json:"userId"`
 	FullName  string `json:"fullName"`
@@ -16,4 +21,3 @@ type User struct {
 	CreatedAt int    `json:"createdAt"`
 	UpdatedAt int    `json:"updatedAt"`
 }
-
