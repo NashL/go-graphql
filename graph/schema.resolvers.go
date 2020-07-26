@@ -8,12 +8,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/nashl/online-store-server/auth"
 	dbConnection "github.com/nashl/online-store-server/database"
 	"github.com/nashl/online-store-server/graph/generated"
 	"github.com/nashl/online-store-server/graph/model"
@@ -48,15 +49,18 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 }
 
 func (r *mutationResolver) Login(ctx context.Context, email string, password string) (*model.Token, error) {
+	fmt.Print(" #### Login Resolver ###### => ", email, password, "\n")
+	auth.SaveAuthCookie(ctx)
 	var u model.User
 
-	err := dbConnection.DB.QueryRow("SELECT userId, email FROM `users` WHERE email = ? AND password = ? ", email, password).Scan(&u.UserID, &u.Email)
+	err := dbConnection.DB.QueryRow("SELECT userId, email, fullName FROM `users` WHERE email = ? AND password = ? ", email, password).Scan(&u.UserID, &u.Email, &u.FullName)
 
-
-	if err != nil{
+	fmt.Print("###### THERE IS AN ERROR", err, "\n")
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("user or password wrong")
 		} else {
+			fmt.Print(" \n((((( CATCHED HERE))))\n ")
 			log.Fatal(err)
 		}
 	}
@@ -64,9 +68,11 @@ func (r *mutationResolver) Login(ctx context.Context, email string, password str
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"authorized": true,
-		"userId": u.UserID,
-		"exp": int(time.Now().Add(time.Hour * 1).Unix()),
+		"authorized": 	true,
+		"userId":     	u.UserID,
+		"email":     	u.Email,
+		"fullName":		u.FullName,
+		"exp":			int(time.Now().Add(time.Hour * 1).Unix()),
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
@@ -87,6 +93,11 @@ func (r *mutationResolver) Login(ctx context.Context, email string, password str
 
 func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	var result []*model.User
+
+	if user := auth.ForContext(ctx); user == nil {
+		return result, fmt.Errorf("access deniedd")
+	}
+
 	rows, err := dbConnection.DB.Query("SELECT userId, fullname, email, password, createdAt, updatedAt FROM `users`")
 	if err != nil {
 		return nil, err
@@ -102,6 +113,45 @@ func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 		result = append(result, &u)
 	}
 	return result, nil
+}
+
+func (r *queryResolver) User(ctx context.Context, userID int) (*model.User, error) {
+	var u model.User
+
+	err := dbConnection.DB.QueryRow("SELECT userId, email, fullName FROM `users` WHERE userId = ? ", userID).Scan(&u.UserID, &u.Email, &u.FullName)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user not found")
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	return &u, nil
+}
+
+func (r *queryResolver) CurrentUser(ctx context.Context) (*model.User, error) {
+	var user *model.User
+
+	user = auth.ForContext(ctx)
+
+	if user == nil {
+		return nil, fmt.Errorf("access denied")
+	}
+
+	//user = user
+	//err := dbConnection.DB.QueryRow("SELECT userId, email, fullName FROM `users` WHERE userId = ? ", user.userId).Scan(&user.UserID, &user.Email, &user.FullName)
+
+	//if err != nil {
+	//	if err == sql.ErrNoRows {
+	//		return nil, errors.New("user not found")
+	//	} else {
+	//		log.Fatal(err)
+	//	}
+	//}
+
+	return user, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

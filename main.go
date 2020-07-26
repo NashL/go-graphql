@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/nashl/online-store-server/auth"
 	dbConnection "github.com/nashl/online-store-server/database"
 	"github.com/nashl/online-store-server/graph"
 	"github.com/nashl/online-store-server/graph/generated"
@@ -24,14 +25,19 @@ func main() {
 	router := chi.NewRouter()
 	// Add CORS middleware around every request
 	// See https://github.com/rs/cors for full option listing
+
 	router.Use(cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:8080", "http://localhost:3000"},
+		AllowedOrigins:   []string{os.Getenv("CLIENT_ORIGIN")},
 		AllowCredentials: true,
 		Debug:            true,
 	}).Handler)
 
-	//start connecting to the database
 	dbConnection.NewDatabase()
+
+	router.Use(auth.Middleware(dbConnection.DB))
+
+
+	//start connecting to the database
 
 	port := os.Getenv("PORT")
 	if port == "" {

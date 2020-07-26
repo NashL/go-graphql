@@ -18,6 +18,8 @@ type Token {
 
 type Query {
   users: [User!]!
+  user(userId: Int!): User!
+  currentUser: User!
 }
 
 input NewUser {
