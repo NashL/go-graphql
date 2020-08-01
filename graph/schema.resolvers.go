@@ -55,8 +55,8 @@ func (r *mutationResolver) Login(ctx context.Context, email string, password str
 
 	err := dbConnection.DB.QueryRow("SELECT userId, email, fullName FROM `users` WHERE email = ? AND password = ? ", email, password).Scan(&u.UserID, &u.Email, &u.FullName)
 
-	fmt.Print("###### THERE IS AN ERROR", err, "\n")
 	if err != nil {
+		fmt.Print("###### THERE IS AN ERROR", err, "\n")
 		if err == sql.ErrNoRows {
 			return nil, errors.New("user or password wrong")
 		} else {
@@ -68,11 +68,65 @@ func (r *mutationResolver) Login(ctx context.Context, email string, password str
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"authorized": 	true,
-		"userId":     	u.UserID,
-		"email":     	u.Email,
-		"fullName":		u.FullName,
-		"exp":			int(time.Now().Add(time.Hour * 1).Unix()),
+		"authorized": true,
+		"userId":     u.UserID,
+		"email":      u.Email,
+		"fullName":   u.FullName,
+		"exp":        int(time.Now().Add(time.Hour * 1).Unix()),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET_KEY")))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	expiredAt := time.Now().Add(time.Hour * 1).Unix()
+	obj := &model.Token{
+		Token:     tokenString,
+		ExpiredAt: int(expiredAt),
+	}
+
+	return obj, nil
+}
+
+func (r *mutationResolver) Signup(ctx context.Context, fullName string, email string, password string) (*model.Token, error) {
+	fmt.Print(" #### SignUp Resolver ###### => ", email, password, "\n")
+	auth.SaveAuthCookie(ctx)
+
+	now := int(time.Now().Unix())
+	user := &model.User{
+		FullName:  fullName,
+		Email:     email,
+		Password:  password,
+		CreatedAt: now,
+		UpdatedAt: 0,
+	}
+	result, err := dbConnection.DB.Exec("INSERT INTO `users` (fullName, email, password, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?)",
+		user.FullName, user.Email, user.Password, user.CreatedAt, user.UpdatedAt)
+
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("after the first error handler")
+
+	lastId, err := result.LastInsertId()
+	fmt.Println("after getting lastId:", lastId)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("after second error handler")
+	user.UserID = strconv.Itoa(int(lastId))
+	fmt.Println("after setting userId")
+
+	// Create a new token object, specifying signing method and the claims
+	// you would like it to contain.
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"authorized": true,
+		"userId":     user.UserID,
+		"email":      user.Email,
+		"fullName":   user.FullName,
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
@@ -152,6 +206,14 @@ func (r *queryResolver) CurrentUser(ctx context.Context) (*model.User, error) {
 	//}
 
 	return user, nil
+}
+
+func (r *queryResolver) Logout(ctx context.Context) (string, error) {
+	var result = "Logout Successfully"
+	if user := auth.ForContext(ctx); user == nil {
+		return result, fmt.Errorf("access deniedd")
+	}
+	return result, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

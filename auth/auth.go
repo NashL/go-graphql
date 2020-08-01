@@ -74,7 +74,7 @@ func Middleware(db *sql.DB) func(http.Handler) http.Handler {
 
 			// Allow unauthenticated users in
 			if err != nil || c == nil {
-				fmt.Print("\n", " $$$ ERROR... ", "\n")
+				fmt.Print("\n", " $$$ unauthenticated user (NO COOKIE) $$$ ", "\n")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -136,6 +136,21 @@ func SaveAuthCookie(ctx context.Context) {
 	fmt.Print("--1--\n")
 	http.SetCookie(*(raw.W), authCookie)
 	fmt.Print("--1--\n")
+}
+
+func RemoveAuthCookie(ctx context.Context) {
+	fmt.Print("\nInsideRemoveAuthCookie--0..\n")
+	expire := time.Now().Add(-7 * 24 * time.Hour)
+	raw := ctx.Value(writerCtxKey).(HTTP)
+	authCookie := &http.Cookie{
+		Name: "onlineStore",
+		Value: "",
+		HttpOnly: true,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+		Expires: expire,
+	}
+	http.SetCookie(*(raw.W), authCookie)
 }
 
 

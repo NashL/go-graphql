@@ -20,6 +20,7 @@ type Query {
   users: [User!]!
   user(userId: Int!): User!
   currentUser: User!
+  logout: String!
 }
 
 input NewUser {
@@ -31,4 +32,5 @@ input NewUser {
 type Mutation {
   createUser(input: NewUser!) : User!
   login(email: String!, password: String!) : Token!
+  signup(fullName: String!, email: String!, password: String!) : Token!
 }
