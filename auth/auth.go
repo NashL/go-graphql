@@ -170,5 +170,5 @@ func RemoveAuthCookie(ctx context.Context) {
 
 func validateAndGetUserID(c *http.Cookie) (string, error){
 	fmt.Print("\n COokie:", c, "\n")
-	return "12", nil
+	return "1", nil
 }
