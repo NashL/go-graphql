@@ -81,6 +81,7 @@ func Middleware(db *sql.DB) func(http.Handler) http.Handler {
 			//
 			userId, err := validateAndGetUserID(c)
 			if err != nil {
+				fmt.Print("\n INVALID COOKIE!! \n")
 				http.Error(w, "Invalid cookie", http.StatusForbidden)
 				return
 			}
@@ -121,7 +122,6 @@ func ForContext(ctx context.Context) *model.User {
 // ForContext finds the HTTP Struct from the context. REQUIRES Middleware to have run.
 func SaveAuthCookie(ctx context.Context) {
 	fmt.Print("\nInsideSaveAUthCookie--0..\n")
-	//fmt.Print("**ctx.value.User", ctx.Value(userCtxKey).(*model.User), "\n")
 	fmt.Print("ctxValue =>", ctx.Value(writerCtxKey), "\n")
 	raw := ctx.Value(writerCtxKey).(HTTP)
 	fmt.Print("--1--\n")
@@ -136,6 +136,20 @@ func SaveAuthCookie(ctx context.Context) {
 	fmt.Print("--1--\n")
 	http.SetCookie(*(raw.W), authCookie)
 	fmt.Print("--1--\n")
+}
+
+func ReadAuthCookie(ctx context.Context) string{
+	fmt.Print("\nInsideReadAuthCookie--0..\n")
+	raw := ctx.Value(writerCtxKey).(HTTP)
+	fmt.Print("--R1--\n")
+	c, err := raw.R.Cookie("onlineStore")
+	fmt.Print("--R2--\n")
+	if err != nil {
+		log.Fatal("ReadAuthCookie ERROR", err)
+	}
+	fmt.Print("--R3--C:", c , "\n")
+	//http.SetCookie(*(raw.W), authCookie)
+	return c.Value
 }
 
 func RemoveAuthCookie(ctx context.Context) {
@@ -156,5 +170,5 @@ func RemoveAuthCookie(ctx context.Context) {
 
 func validateAndGetUserID(c *http.Cookie) (string, error){
 	fmt.Print("\n COokie:", c, "\n")
-	return "1", nil
+	return "12", nil
 }

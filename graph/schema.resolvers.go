@@ -145,6 +145,23 @@ func (r *mutationResolver) Signup(ctx context.Context, fullName string, email st
 	return obj, nil
 }
 
+func (r *mutationResolver) RefreshToken(ctx context.Context)(*model.Token, error) {
+	fmt.Print("REFRESHING TOKEN...\n")
+	tokenValue := auth.ReadAuthCookie(ctx)
+
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	token := &model.Token{
+		Token:     tokenValue,
+		ExpiredAt: int(time.Now().Add(time.Hour * 1).Unix()),
+	}
+	//tokenStatus.Status = true
+	//auth.SaveAuthCookie(ctx)
+	return token, nil
+}
+
 func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	var result []*model.User
 
